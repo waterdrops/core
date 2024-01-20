@@ -18,7 +18,7 @@ DATA_REGISTRY = "area_registry"
 EVENT_AREA_REGISTRY_UPDATED = "area_registry_updated"
 STORAGE_KEY = "core.area_registry"
 STORAGE_VERSION_MAJOR = 1
-STORAGE_VERSION_MINOR = 3
+STORAGE_VERSION_MINOR = 4
 SAVE_DELAY = 10
 
 
@@ -40,6 +40,7 @@ class AreaEntry:
     )
     id: str | None = attr.ib(default=None)
     picture: str | None = attr.ib(default=None)
+    floor_id: str | None = attr.ib(default=None)
 
     def generate_id(self, existing_ids: Container[str]) -> None:
         """Initialize ID."""
@@ -72,6 +73,11 @@ class AreaRegistryStore(Store[dict[str, list[dict[str, Any]]]]):
                 # Version 1.3 adds aliases
                 for area in old_data["areas"]:
                     area["aliases"] = []
+
+            if old_minor_version < 4:
+                # Version 1.4 adds floor_id
+                for area in old_data["areas"]:
+                    area["floor_id"] = area.get("floor_id")
 
         if old_major_version > 1:
             raise NotImplementedError
@@ -172,10 +178,11 @@ class AreaRegistry:
         aliases: set[str] | UndefinedType = UNDEFINED,
         name: str | UndefinedType = UNDEFINED,
         picture: str | None | UndefinedType = UNDEFINED,
+        floor_id: str | None | UndefinedType = UNDEFINED,
     ) -> AreaEntry:
         """Update name of area."""
         updated = self._async_update(
-            area_id, aliases=aliases, name=name, picture=picture
+            area_id, aliases=aliases, name=name, picture=picture, floor_id=floor_id
         )
         self.hass.bus.async_fire(
             EVENT_AREA_REGISTRY_UPDATED, {"action": "update", "area_id": area_id}
@@ -190,6 +197,7 @@ class AreaRegistry:
         aliases: set[str] | UndefinedType = UNDEFINED,
         name: str | UndefinedType = UNDEFINED,
         picture: str | None | UndefinedType = UNDEFINED,
+        floor_id: str | None | UndefinedType = UNDEFINED,
     ) -> AreaEntry:
         """Update name of area."""
         old = self.areas[area_id]
@@ -199,6 +207,7 @@ class AreaRegistry:
         for attr_name, value in (
             ("aliases", aliases),
             ("picture", picture),
+            ("floor_id", floor_id),
         ):
             if value is not UNDEFINED and value != getattr(old, attr_name):
                 new_values[attr_name] = value
@@ -246,6 +255,7 @@ class AreaRegistry:
                     name=area["name"],
                     normalized_name=normalized_name,
                     picture=area["picture"],
+                    floor_id=area["floor_id"],
                 )
                 self._normalized_name_area_idx[normalized_name] = area["id"]
 
@@ -267,11 +277,19 @@ class AreaRegistry:
                 "name": entry.name,
                 "id": entry.id,
                 "picture": entry.picture,
+                "floor_id": entry.floor_id,
             }
             for entry in self.areas.values()
         ]
 
         return data
+
+    @callback
+    def async_clear_floor_id(self, floor_id: str) -> None:
+        """Clear floor from registry entries."""
+        for area_id, area in self.areas.items():
+            if floor_id == area.floor_id:
+                self.async_update(area_id, floor_id=None)
 
 
 @callback
@@ -285,6 +303,12 @@ async def async_load(hass: HomeAssistant) -> None:
     assert DATA_REGISTRY not in hass.data
     hass.data[DATA_REGISTRY] = AreaRegistry(hass)
     await hass.data[DATA_REGISTRY].async_load()
+
+
+@callback
+def async_entries_for_floor(registry: AreaRegistry, floor_id: str) -> list[AreaEntry]:
+    """Return entries that match an floor."""
+    return [area for area in registry.areas.values() if floor_id == area.floor_id]
 
 
 def normalize_area_name(area_name: str) -> str:
