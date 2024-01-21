@@ -3,39 +3,37 @@
 
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
-NOT_QINGPING_SERVICE_INFO = BluetoothServiceInfo(
-    name="Not it",
-    address="61DE521B-F0BF-9F44-64D4-75BBE1738105",
+SCALE_SERVICE_INFO = BluetoothServiceInfo(
+    name="",
+    address="5F:5A:5C:52:D3:94",
     rssi=-63,
-    manufacturer_data={3234: b"\x00\x01"},
+    manufacturer_data={57280: b"\x06\xa4\x00\x00\x00\x020_Z\\R\xd3\x94"},
+    service_uuids=[],
     service_data={},
-    service_uuids=[],
     source="local",
 )
-
-LIGHT_AND_SIGNAL_SERVICE_INFO = BluetoothServiceInfo(
-    name="Xiaogui Motion & Light",
-    manufacturer_data={},
-    service_uuids=[],
-    address="aa:bb:cc:dd:ee:ff",
-    rssi=-60,
-    service_data={
-        "0000fdcd-0000-1000-8000-00805f9b34fb": (
-            b"H\x12\xcd\xd5`4-X\x08\x04\x00\r\x00\x00\x0f\x01\xee"
-        )
+SCALE_SERVICE_INFO_2 = BluetoothServiceInfo(
+    name="",
+    address="5F:5A:5C:52:D3:94",
+    rssi=-63,
+    manufacturer_data={
+        57280: b"\x06\xa4\x00\x00\x00\x020_Z\\R\xd3\x94",
+        63424: b"\x06\xa4\x13\x80\x00\x021_Z\\R\xd3\x94",
     },
+    service_uuids=[],
+    service_data={},
     source="local",
 )
-
-
-NO_DATA_SERVICE_INFO = BluetoothServiceInfo(
-    name="Xiaogui Motion & Light",
-    manufacturer_data={},
-    service_uuids=[],
-    address="aa:bb:cc:dd:ee:ff",
-    rssi=-60,
-    service_data={
-        "0000fdcd-0000-1000-8000-00805f9b34fb": b"0X\x83\n\x02\xcd\xd5`4-X\x08"
+SCALE_SERVICE_INFO_3 = BluetoothServiceInfo(
+    name="",
+    address="5F:5A:5C:52:D3:94",
+    rssi=-63,
+    manufacturer_data={
+        57280: b"\x06\xa4\x00\x00\x00\x020_Z\\R\xd3\x94",
+        63424: b"\x06\xa4\x13\x80\x00\x021_Z\\R\xd3\x94",
+        6592: b"\x06\x8e\x00\x00\x00\x020_Z\\R\xd3\x94",
     },
+    service_uuids=[],
+    service_data={},
     source="local",
 )

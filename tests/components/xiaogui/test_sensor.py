@@ -1,35 +1,21 @@
 """Test the Xiaogui sensors."""
-from datetime import timedelta
-import time
 
-from homeassistant.components.bluetooth import (
-    FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS,
-)
 from homeassistant.components.sensor import ATTR_STATE_CLASS
 from homeassistant.components.xiaogui.const import DOMAIN
-from homeassistant.const import (
-    ATTR_FRIENDLY_NAME,
-    ATTR_UNIT_OF_MEASUREMENT,
-    STATE_UNAVAILABLE,
-)
+from homeassistant.const import ATTR_FRIENDLY_NAME, ATTR_UNIT_OF_MEASUREMENT
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
 
-from . import LIGHT_AND_SIGNAL_SERVICE_INFO, NO_DATA_SERVICE_INFO
+from . import SCALE_SERVICE_INFO, SCALE_SERVICE_INFO_2, SCALE_SERVICE_INFO_3
 
-from tests.common import MockConfigEntry, async_fire_time_changed
-from tests.components.bluetooth import (
-    inject_bluetooth_service_info,
-    patch_all_discovered_devices,
-    patch_bluetooth_time,
-)
+from tests.common import MockConfigEntry
+from tests.components.bluetooth import inject_bluetooth_service_info
 
 
 async def test_sensors(hass: HomeAssistant) -> None:
     """Test setting up creates the sensors."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        unique_id="aa:bb:cc:dd:ee:ff",
+        unique_id="5F:5A:5C:52:D3:94",
     )
     entry.add_to_hass(hass)
 
@@ -37,72 +23,32 @@ async def test_sensors(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     assert len(hass.states.async_all("sensor")) == 0
-    inject_bluetooth_service_info(hass, LIGHT_AND_SIGNAL_SERVICE_INFO)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all("sensor")) == 1
 
-    lux_sensor = hass.states.get("sensor.motion_light_eeff_illuminance")
-    lux_sensor_attrs = lux_sensor.attributes
-    assert lux_sensor.state == "13"
-    assert lux_sensor_attrs[ATTR_FRIENDLY_NAME] == "Motion & Light EEFF Illuminance"
-    assert lux_sensor_attrs[ATTR_UNIT_OF_MEASUREMENT] == "lx"
-    assert lux_sensor_attrs[ATTR_STATE_CLASS] == "measurement"
+    inject_bluetooth_service_info(hass, SCALE_SERVICE_INFO)
+    await hass.async_block_till_done()
+    inject_bluetooth_service_info(hass, SCALE_SERVICE_INFO_2)
+    await hass.async_block_till_done()
+
+    assert len(hass.states.async_all("sensor")) == 2
+
+    mass_sensor = hass.states.get("sensor.tzc4_d394_mass")
+    mass_sensor_attrs = mass_sensor.attributes
+    assert mass_sensor.state == "17.0"
+    assert mass_sensor_attrs[ATTR_FRIENDLY_NAME] == "TZC4 D394 Mass"
+    assert mass_sensor_attrs[ATTR_UNIT_OF_MEASUREMENT] == "kg"
+    assert mass_sensor_attrs[ATTR_STATE_CLASS] == "measurement"
+
+    mass_sensor = hass.states.get("sensor.tzc4_d394_non_stabilized_mass")
+    mass_sensor_attrs = mass_sensor.attributes
+    assert mass_sensor.state == "17.0"
+    assert mass_sensor_attrs[ATTR_FRIENDLY_NAME] == "TZC4 D394 Non Stabilized Mass"
+    assert mass_sensor_attrs[ATTR_UNIT_OF_MEASUREMENT] == "kg"
+    assert mass_sensor_attrs[ATTR_STATE_CLASS] == "measurement"
+
+    inject_bluetooth_service_info(hass, SCALE_SERVICE_INFO_3)
+    await hass.async_block_till_done()
+
+    assert len(hass.states.async_all("sensor")) == 2
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
-
-
-async def test_binary_sensor_restore_state(hass: HomeAssistant) -> None:
-    """Test setting up creates the binary sensors and restoring state."""
-    start_monotonic = time.monotonic()
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        unique_id="aa:bb:cc:dd:ee:ff",
-    )
-    entry.add_to_hass(hass)
-
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-
-    assert len(hass.states.async_all("sensor")) == 0
-    inject_bluetooth_service_info(hass, LIGHT_AND_SIGNAL_SERVICE_INFO)
-    await hass.async_block_till_done()
-    assert len(hass.states.async_all("sensor")) == 1
-
-    lux_sensor = hass.states.get("sensor.motion_light_eeff_illuminance")
-    lux_sensor_attrs = lux_sensor.attributes
-    assert lux_sensor.state == "13"
-    assert lux_sensor_attrs[ATTR_FRIENDLY_NAME] == "Motion & Light EEFF Illuminance"
-    assert lux_sensor_attrs[ATTR_UNIT_OF_MEASUREMENT] == "lx"
-    assert lux_sensor_attrs[ATTR_STATE_CLASS] == "measurement"
-
-    assert await hass.config_entries.async_unload(entry.entry_id)
-    await hass.async_block_till_done()
-
-    # Fastforward time without BLE advertisements
-    monotonic_now = start_monotonic + FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1
-
-    with patch_bluetooth_time(
-        monotonic_now,
-    ), patch_all_discovered_devices([]):
-        async_fire_time_changed(
-            hass,
-            dt_util.utcnow()
-            + timedelta(seconds=FALLBACK_MAXIMUM_STALE_ADVERTISEMENT_SECONDS + 1),
-        )
-        await hass.async_block_till_done()
-
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-
-    # Device is no longer available because its not in range
-
-    lux_sensor = hass.states.get("sensor.motion_light_eeff_illuminance")
-    assert lux_sensor.state == STATE_UNAVAILABLE
-
-    # Device is back in range
-
-    inject_bluetooth_service_info(hass, NO_DATA_SERVICE_INFO)
-
-    lux_sensor = hass.states.get("sensor.motion_light_eeff_illuminance")
-    assert lux_sensor.state == "13"
