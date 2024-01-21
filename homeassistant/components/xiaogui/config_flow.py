@@ -13,9 +13,6 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .const import DOMAIN
 
-# How long to wait for additional advertisement packets if we don't have the right ones
-ADDITIONAL_DISCOVERY_TIMEOUT = 60
-
 
 class XiaoguiConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for xiaogui."""
