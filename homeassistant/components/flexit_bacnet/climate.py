@@ -1,4 +1,5 @@
 """The Flexit Nordic (BACnet) integration."""
+
 import asyncio.exceptions
 from typing import Any
 
@@ -15,34 +16,34 @@ from homeassistant.components.climate import (
     PRESET_HOME,
     ClimateEntity,
     ClimateEntityFeature,
+    HVACAction,
     HVACMode,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, PRECISION_HALVES, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import (
-    DOMAIN,
     MAX_TEMP,
     MIN_TEMP,
     PRESET_TO_VENTILATION_MODE_MAP,
     VENTILATION_TO_PRESET_MODE_MAP,
 )
-from .coordinator import FlexitCoordinator
+from .coordinator import FlexitConfigEntry, FlexitCoordinator
 from .entity import FlexitEntity
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    async_add_devices: AddEntitiesCallback,
+    config_entry: FlexitConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up the Flexit Nordic unit."""
-    coordinator: FlexitCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    async_add_entities([FlexitClimateEntity(config_entry.runtime_data)])
 
-    async_add_devices([FlexitClimateEntity(coordinator)])
+
+PARALLEL_UPDATES = 1
 
 
 class FlexitClimateEntity(FlexitEntity, ClimateEntity):
@@ -62,7 +63,10 @@ class FlexitClimateEntity(FlexitEntity, ClimateEntity):
     ]
 
     _attr_supported_features = (
-        ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TARGET_TEMPERATURE
+        ClimateEntityFeature.PRESET_MODE
+        | ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
     )
 
     _attr_target_temperature_step = PRECISION_HALVES
@@ -78,6 +82,13 @@ class FlexitClimateEntity(FlexitEntity, ClimateEntity):
     async def async_update(self) -> None:
         """Refresh unit state."""
         await self.device.update()
+
+    @property
+    def hvac_action(self) -> HVACAction | None:
+        """Return current HVAC action."""
+        if self.device.electric_heater:
+            return HVACAction.HEATING
+        return HVACAction.FAN
 
     @property
     def current_temperature(self) -> float:
