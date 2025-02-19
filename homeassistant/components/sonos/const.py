@@ -1,4 +1,5 @@
 """Const for Sonos."""
+
 from __future__ import annotations
 
 import datetime
@@ -169,6 +170,7 @@ MODELS_TV_ONLY = (
     "BEAM",
     "PLAYBAR",
     "PLAYBASE",
+    "ULTRA",
 )
 MODELS_LINEIN_AND_TV = ("AMP",)
 
